@@ -1,0 +1,395 @@
+que1] 
+create or replace procedure user_query_emp(p_myeno number, p_mysal out number,p_myjob out varchar2) as
+begin
+select sal,job into p_mysal,p_myjob from emp where empno=p_myeno;
+dbms_output.put_line('salary = '|| p_mysal||' job is ='||p_myjob);
+exception
+when no_data_found then
+dbms_output.put_line('empno not available');
+end;
+/
+//caller block
+declare
+var_sal number;
+var_job varchar2(20);
+begin
+user_query_emp(7788, var_sal,var_job);
+dbms_output.put_line('sal  and job from caller block= '||var_sal ||' and '|| var_job);
+end;
+/
+o/p;
+salary = 8630 job is =ANALYST
+sal  and job from caller block= 8630 and ANALYST
+
+----------------------------------------------------------------------------------------------------------------------------------
+que2]
+•Create a function named USER_ANNUAL_COMP that has three parameters p_eno, p_sal and p_comm for passing on the values of an employee_id, the current salary and commission of the employee respectively. The function calculates and returns the annual compensation of the employee by using the following formula.
+     annual_compensation =  (p_sal+p_comm)*12
+      If the salary or commission value is NULL then zero should be substituted for it. 
+•Give a call to USER_ANNUAL_COMP from a SELECT statement, against the EMPLOYEES table.
+
+
+create or replace function user_annual_comp (p_eno emp.empno%type, p_sal out emp.sal%type, p_comm out emp.comm%type) return number as
+annual_comm number;
+begin
+select sal,comm into p_sal,p_comm from emp where empno=p_eno;
+annual_comm:=(p_sal+nvl(p_comm,0))*12;
+dbms_output.put_line('annual comm is '||annual_comm);
+return annual_comm;
+exception
+when no_data_found then
+dbms_output.put_line('empno not available');
+end;
+/
+
+declare
+v_empno emp.empno%type:=&enter_empno;
+v_sal emp.sal%type;
+v_comm emp.comm%type;
+abc number;
+annual_comm number;
+begin
+abc:=user_annual_comp(v_empno,v_sal,v_comm);
+dbms_output.put_line('salary is '||v_sal ||' ,commission is '||v_comm||' and  annual commision is '||abc);
+end;
+/
+Enter value for enter_empno: 7499                //empno having comm
+annual comm is 26832
+salary is 1936 ,commission is 300 and  annual commision is 26832
+
+Enter value for enter_empno: 7788         //empno not having comm
+annual comm is 103560
+salary is 8630 ,commission is  and  annual commision is 103560
+
+----------------------------------------------------------------------------------------------------------------
+que3]
+•Create a function named USER_VALID_DEPTNO that has a single parameter p_dno to accept a department number and returns a BOOLEAN value. The function returns TRUE if the department number exists in the DEPARTMENTS table else it returns FALSE.
+•Create a procedure named SHOW_STRENGTH that accepts department number in a single parameter p_deptno from user. The procedure gives a call to USER_VALID_DEPTNO. If the function returns TRUE then the procedure finds out how many employees are there in the department from the EMPLOYEES table and displays the same on the screen. If the function returns FALSE then the procedure displays an appropriate error message.
+•Give call to SHOW_STRENGTH by passing on department number 10. Do the same for department number 76
+ 
+create or replace function user_valid_deptno(p_dno dept.deptno%type) return boolean as
+ct number;
+begin
+select count(*) into ct from dept where deptno=p_dno;
+if ct=1 then 
+dbms_output.put_line('deptno exists');
+return true;
+else
+dbms_output.put_line('deptno doesnot exists');
+return false;
+end if;
+end;
+/
+
+//////////////////////to check func ///////////
+declare
+p_dno dept.deptno%type:=&dept;
+begin
+if user_valid_deptno(p_dno) then
+dbms_output.put_line('true');
+else
+dbms_output.put_line('false');
+end if;
+end;
+/
+/////////////////////////////////////////////
+create or replace procedure show_strength (p_dno emp.deptno%type) as
+ct1 number;
+invalid_dept exception;
+begin
+if (user_valid_deptno(p_dno)) then
+	select count(empno) into ct1 from emp where deptno=p_dno;
+	dbms_output.put_line('employees in dept '||p_dno ||' is '|| ct1);
+else
+
+raise invalid_dept;
+end if;
+exception
+when invalid_dept then
+dbms_output.put_line('invalid dept');
+end;
+/
+SQL> execute show_strength(10);
+deptno exists
+employees in dept 10 is 3
+or
+SQL> execute show_strength(50);
+deptno doesnot exists
+invalid dept
+
+---------------------------------------------------------------------------------
+que4]
+•Create a procedure named SHOW_RECORDS that accepts a single parameter p_join_date. The procedure determines and displays on the screen, the details of the employees who have joined after p_join_date, in the following format. 
+Employees Joined after ddth, Month yyyy
+
+EMPLOYEE FIRST NAME		JOB		SALARY	DEPARTMENT 
+_____________________________________________________________
+XXXXXXXX			XXXXX		99,999		  99
+XXXXXXXX			XXXXX		99,999		  99
+The procedure should display appropriate message if there is no employee who joined after p_join_date .
+•Give a call to SHOW_RECORDS from an anonymous PL/SQL block 
+
+
+create or replace procedure show_records(p_join_date varchar2) as
+dt emp.hiredate%type;
+begin
+dt:=to_date(p_join_date,'DD-MM-YYYY');
+declare
+cursor c_emp is select * from emp where trunc(hiredate)>trunc(dt);
+v_emp c_emp%rowtype;
+	begin
+	open c_emp;
+	loop
+	fetch c_emp into v_emp;
+	exit when c_emp%notfound;
+	dbms_output.put_line(v_emp.ename||'  '||v_emp.job||'  '||v_emp.sal||'  '||v_emp.deptno||'  '||v_emp.hiredate);
+	end loop;
+	end;
+end;
+/
+
+execute show_records('21-02-1981');
+
+SQL> execute show_records('21-02-1981');
+KING  PRESIDENT  6050  10  17-NOV-81
+BLAKE  MANAGER  3448.5  30  01-MAY-81
+CLARK  MANAGER  2964.5  10  09-JUN-81
+JONES  MANAGER  3279.94  20  02-APR-81
+MARTIN  SALESMAN  1512.5  30  28-SEP-81
+TURNER  SALESMAN  1815  30  08-SEP-81
+JAMES  CLERK  8149.5  30  03-DEC-81
+WARD  SALESMAN  1512.5  30  22-FEB-81
+FORD  ANALYST  3630  20  03-DEC-81
+SCOTT  ANALYST  8630  20  09-DEC-82
+ADAMS  CLERK  1331  20  12-JAN-83
+MILLER  CLERK  1872  10  23-JAN-82
+
+--------------------------------------------------------------------------------------------------------
+que5]
+
+•Create a procedure named ADD_EMPLOYEE to hire an employee. Parameters to the procedure are job_id, manager_id, hire_date, salary, commission and department_id. Validate the following:
+
+a. Employee number is not taken as a parameter but is auto generated by using a SEQUENCE. 
+b. Job is either ‘Programmer’ or ‘Accountant’ or ‘Public Accountant’. The input value can be entered in any case.
+c. Manager is an existing employee.
+d. Hiredate is less than system date.
+e. Salary must be greater than 800
+f. Commission is not null if the job is ‘Accountant’. For any other job, commission is null.
+g. Department_id must exist in the DEPARTMENTS table.
+Insert the record if the above validations are met and display a message ‘1 row inserted’. If the row is not inserted generate an exception and handle it by displaying an appropriate message. 
+•Give a call to ADD_EMPLOYEE through an anonymous PL/SQL block
+
+
+create or replace procedure add_employee(p_jid emp.job%type,p_name emp.ename%type,p_mgrid emp.mgr%type,p_hd emp.hiredate%type,p_sal emp.sal%type,p_comm emp.comm%type,p_deptid emp.deptno%type) as
+
+v_maxno emp.empno%type:=0;
+dno number:=0;
+mno number:=0;
+invalid_job exception;
+low_sal exception;
+invalid_dept exception;
+not_valid_empno exception;
+date_error exception;
+commision_err_1 exception;
+commision_err_2 exception;
+begin
+select max(empno) into v_maxno from emp;
+v_maxno:=v_maxno+1;
+if p_jid='CLERK' or  p_jid= 'ANALYST' or  p_jid= 'SALESMAN' then
+dbms_output.put_line('---------------processing--------------');
+else 
+raise invalid_job;
+end if;
+
+select count(*) into mno from emp where empno=p_mgrid;
+if (mno!=0) then
+dbms_output.put_line('---------------processing--------------');
+else 
+raise not_valid_empno;
+end if;
+
+if p_hd<sysdate then
+dbms_output.put_line('---------------processing--------------');
+else 
+raise date_error;
+end if;
+
+if p_sal >800 then
+dbms_output.put_line('---------------processing--------------');
+else 
+raise low_sal;
+end if;
+
+if p_jid ='SALESMAN' then
+	if p_comm is not null then
+		dbms_output.put_line('---------------processing--------------');
+	else
+		raise commision_err_1;
+	end if;
+else
+	if p_comm is null then
+		dbms_output.put_line('---------------processing--------------');
+	else
+		raise commision_err_2;
+	end if;
+end if;
+
+select count(*) into dno from dept where deptno=p_deptid;
+if (dno!=0) then
+dbms_output.put_line('---------------processing--------------');
+else 
+raise invalid_dept;
+end if;
+
+insert into emp values(v_maxno,p_name,p_jid,p_mgrid,p_hd,p_sal,p_comm,p_deptid);
+dbms_output.put_line('one row inserted');
+
+exception
+	when invalid_job then
+	dbms_output.put_line('job is invalid');
+	when low_sal then
+	dbms_output.put_line('salary has to be greater than 800');
+	when invalid_dept then
+	dbms_output.put_line('department not available');
+	when not_valid_empno then
+	dbms_output.put_line('Manager Id is Invalid');
+	when date_error then
+	dbms_output.put_line('Hire date should be less than todays date');
+	when commision_err_1 then
+	dbms_output.put_line('Commision can not be null for salesman');
+	when commision_err_2 then
+	dbms_output.put_line('Commision has to be null');
+end;
+
+/
+
+execute add_employee('SALESMAN','MARITAL',7521,'21-JAN-2016',1000,120,10);
+
+
+(p_jid emp.job%type,p_name emp.ename%type,p_mgrid emp.mgr%type,p_hd emp.hiredate%type,p_sal emp.sal%type,p_comm emp.comm%type,p_deptid emp.deptno%type) 
+
+
+when invalid_job then
+	dbms_output.put_line('job is invalid');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

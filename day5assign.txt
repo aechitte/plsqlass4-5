@@ -1,0 +1,429 @@
+que1]
+•Create a package named MANAGE_EMP_PACK that has two public procedures, two package level variables(private vars) and a private function. The public procedure HIRE_EMP adds an employee record in EMPLOYEES table and the public procedure FIRE_EMP deletes an employee record from the EMPLOYEES table. The two variables v_insert_cnt and v_delete_cnt are used in the package, for keeping record of the numbers of times insert / delete has been executed. 
+Create a private function VALIDATE_EMP in the package to validate employee number. This function can be called from HIRE_EMP and FIRE_EMP.
+•The function VALIDATE_EMP accepts an employee number in a parameter p_eno and returns TRUE if the value of employee number exists in the EMPLOYEES table else it returns FALSE.
+•The procedure HIRE_EMP takes all the column values of the EMPLOYEES table as parameters. It gives a call to VALIDATE_EMP by passing on the value of employee number and if the function returns TRUE then it displays message ‘Employee number already in use’. If the function returns FALSE then it inserts a new record in the EMPLOYEES table and displays a message ‘One employee added’. It also increments the value of v_insert_cnt by 1.
+•The procedure FIRE_EMP accepts an employee number as a parameter and gives a call to VALIDATE_EMP by passing on the value of employee number. If the function returns TRUE then it deletes the corresponding record from the EMPLOYEES table, displays message ‘One employee deleted’ and increments the value of v_delete_cnt by 1. If the function returns FALSE then it displays message ‘Wrong employee number’.
+•Check working of the methods in MANAGE_EMP_PACK by giving calls to the public procedures and by displaying value of the appropriate package variable, through an anonymous block. 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+create or replace package manage_emp_pack as
+v_insert_cnt number:=0;
+v_delete_cnt number:=0;
+function validate_emp (p_empno emp.empno%type) return boolean;
+procedure hire_emp(p_empno emp.empno%type, p_ename emp.ename%type, p_job emp.job%type,p_mgr emp.mgr%type,p_hiredate emp.hiredate%type,
+p_sal emp.sal%type,p_comm emp.comm%type,p_deptno emp.deptno%type) ;
+procedure fire_emp(p_empno emp.empno%type);
+end;
+/
+
+create or replace package body manage_emp_pack as
+
+
+	function validate_emp (p_empno emp.empno%type) return boolean as
+	ct number:=0;
+begin
+	select count(*)  into ct from emp where empno=p_empno;
+	if (ct=0) then
+	dbms_output.put_line(p_empno ||'new employee');
+	return true;
+	else
+	dbms_output.put_line(p_empno ||'employee doesnot exist');
+	return false;
+	end if;
+end;
+
+	procedure hire_emp(p_empno emp.empno%type, p_ename emp.ename%type, p_job emp.job%type,p_mgr emp.mgr%type,p_hiredate emp.hiredate%type,
+	p_sal emp.sal%type,p_comm emp.comm%type,p_deptno emp.deptno%type) as
+	cnt number:=0;
+	invalid_emp exception;
+	invalid_mgr exception;
+
+begin 
+	if validate_emp(p_empno) then
+	select count(*) into cnt from emp where mgr=p_mgr;
+		if cnt!=0 then 
+		insert into emp values(p_empno,p_ename,p_job,p_mgr,p_hiredate,p_sal,p_comm,p_deptno);
+		v_insert_cnt:=v_insert_cnt+1;
+		dbms_output.put_line('1 employee added');
+	else
+		raise invalid_mgr;
+	end if;
+else
+	raise invalid_emp;
+end if;
+
+exception 
+	when invalid_emp then
+	dbms_output.put_line('Invalid employee id');
+	when invalid_mgr then
+	dbms_output.put_line('Invalid Manager id);
+end;
+
+procedure fire_emp(p_empno emp.empno%type) as
+	invalid_emp exception;
+begin
+	if validate_emp(p_empno) then
+		raise invalid_emp;
+	else	
+		delete from emp where empno=p_empno;
+		v_delete_cnt:=v_delete_cnt+1;
+		dbms_output.put_line('one employee deleted');
+		
+		
+	end if;
+exception
+	when invalid_emp then
+	dbms_output.put_line('Invalid employee id');
+
+end;
+
+/
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+que2]
+•Create a package named MY_EMP_PACK having two overloaded functions named GET_AVG_SAL. The first function accepts first name as a parameter while the second function accepts employee_id as a parameter and both return the average salary paid in the department to which the employee belongs.  Both the functions should handle the exception for non-existing employee by displaying an appropriate error message.
+•Give a call to GET_AVG_SAL through an anonymous PL/SQL block by passing on employee number 204. Do the same again by passing on employee name ‘Valli’.
+
+
+
+create or replace package my_emp_pack as
+function GET_AVG_SAL(p_ename emp.ename%type) return number;
+function GET_AVG_SAL(p_eno emp.empno%type) return number;
+v_sal emp.sal%type;
+v_dept emp.deptno%type;
+end;
+/
+
+create or replace package body my_emp_pack  as
+function GET_AVG_SAL(p_ename emp.ename%type) return number as
+begin
+select deptno into v_dept from emp where ename=p_ename;
+select avg(sal) into v_sal from emp where deptno=v_dept;
+dbms_output.put_line('average sal is '||v_sal);
+dbms_output.put_line('for detp no '||v_dept);
+return v_sal;
+end;
+
+   
+function GET_AVG_SAL(p_eno emp.empno%type) return number as
+begin
+select deptno into v_dept from emp where empno=p_eno;
+select avg(sal) into v_sal from emp where deptno=v_dept;
+dbms_output.put_line('average sal is '||v_sal);
+dbms_output.put_line('for detp no '||v_dept);
+return v_sal;
+end;
+end;
+/
+
+
+declare
+res number;
+begin
+res:= my_emp_pack.GET_AVG_SAL('SMITH');
+dbms_output.put_line('res= '||res);
+
+res:= my_emp_pack.GET_AVG_SAL(7934);
+dbms_output.put_line('res= '||res);
+end;
+o/p:-
+average sal is 4967.79
+for detp no 20
+res= 4967.79
+average sal is 2971.63
+for detp no 10
+res= 2971.63
+----------------------------------------------------------------------------------------------------------------------
+
+que3]Create a package containing a private function Find_Plan and a public procedure Display_Plans as described below:
+
+a)The function Find_Plan will find out and return the plan id which is used by maximum customer.					
+b)The procedure Display_Plan will call Find_Plan function and will display the Plan name and the corresponding service name.
+c)Call the above procedure from anonymous PL/SQL block. 
+The  sample report is shown below :
+
+Plan ID :_______________ Plan_Name:_____________
+Service_name:_________
+Note: refer Operator_schema schema
+
+create or replace package PLANS_1 as
+procedure DISPLAY_PLAN;
+end;
+/
+
+create or replace package body PLANS_1 as
+function FIND_PLAN return number as
+pid number:=0;
+begin
+select plan_id into pid from customers group by plan_id having count(*)=(select max(count(*)) from customers group by plan_id);
+dbms_output.put_line('plan_id selected by max customers is '||pid);
+return pid;
+end;
+
+ procedure DISPLAY_PLAN as
+maxpid number;
+v_pname plans.plan_name%type;
+v_sid  plans.service_id%type;
+v_sname services.service_name%type;
+begin
+maxpid:=FIND_PLAN;
+select plan_name,service_id into v_pname,v_sid from plans where plan_id=maxpid;
+select service_id into v_sname from services where service_id=v_sid;
+dbms_output.put_line('Plan ID : '||maxpid||' Plan Name : '||v_pname);
+dbms_output.put_line('Service Name : '||v_sname);
+end;
+end;
+/
+
+//execute plans_1.display_plan;//
+SQL> execute plans_1.display_plan;
+plan_id selected by max customers is 8
+Plan ID : 8 Plan Name : Unlimited Plan
+Service Name : 103
+
+
+ //to check if func works properly//
+declare
+v_pl number;
+begin
+v_pl:=FIND_PLAN;
+dbms_output.put_line('plan id is '||v_pl);
+end;
+/
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+que4]
+Create a Package pkgDisplay_details which has a public function and a public procedure as given below :					
+1)Public function fnDisplayStatus which accepts paper id as parameter 
+and returns the status of  paper. If an invalid paper is passed then it returns invalid 
+2)Public procedure prDispCount which accepts author id and status 
+as parameter. The procedure displays the no of papers by the author with the given status.
+Hint : prDispCount('A001','Published') will display the count as 2.
+
+Invoke the above function and procedure from the anonymous block and display the values returned by the function.
+
+Note: refer scholar_domain_publication schema
+
+create or replace package pkgDisplay_details as
+function fnDisplayStatus(v_pid publications.paper_id%type) return varchar2 ;
+procedure prDispCount(aid  publications.pri_authr_id%type,v_status publications.status%type);
+end;
+/
+
+create or replace package body pkgDisplay_details as
+
+ function fnDisplayStatus(v_pid publications.paper_id%type) return varchar2 as
+   v_status publications.status%type;
+begin
+select status into v_status from publications where paper_id=v_pid;
+dbms_output.put_line('status of paper is '||v_status);
+return v_status;
+end;
+
+procedure prDispCount(aid publications.pri_authr_id%type,v_status publications.status%type) as
+cnt number;
+begin
+select count(*) into cnt from publications  where pri_authr_id=aid and status=v_status ;
+dbms_output.put_line('the count is '||cnt);
+end;
+end;
+/
+//anonymous block//
+declare
+var_dis publications.status%type;
+begin
+var_dis:=pkgDisplay_details.fnDisplayStatus('P001');
+dbms_output.put_line('status is '||var_dis);
+pkgDisplay_details.prDispCount('A001','Published');
+end;
+/
+
+status of paper is Published
+status is Published
+the count is 3
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+que5]Create a Package named Movie_Pack which contains procedures and functions mentioned in A and B.   				                                   
+
+A. Write a private function named fnGenerateMovieID which generates an unique movie id in continuation to the existing one and return the same.
+
+B. Write a procedure named prNewMovie  which inserts a new movie details into the movie table:
+
+The procedure accepts following parameters:
+•Movie name
+•Language
+•Genre
+•Duration
+•Date of release
+The procedure should do the following
+•Invoke the function fnGenerateMovieID which return the movie Id.
+•Catch all the possible exceptions
+•Insert the record
+•After successful insertion display the message “1 row inserted in Movie_details table”.
+
+Note: refer cinema_schema schema
+
+create or replace package Movie_Pack as
+procedure  prNewMovie(v_mname movie_details.movie_name%type,v_lang movie_details.language%type,v_genre movie_details.genre%type,v_duration movie_details.duration%type,v_dor movie_details.date_of_release%type);
+end;
+/
+
+create or replace package body Movie_Pack as 
+function fnGenerateMovieID return movie_details.movie_id%type as
+v_mid movie_details.movie_id%type;
+begin
+select substr(max(movie_id),4) into v_mid from movie_details;
+v_mid:=v_mid+1;
+v_mid:='Mov'||v_mid;
+dbms_output.put_line('next movie_id is '||v_mid);
+return v_mid;
+end;
+
+procedure prNewMovie(v_mname movie_details.movie_name%type,v_lang movie_details.language%type,v_genre movie_details.genre%type,v_duration movie_details.duration%type,v_dor movie_details.date_of_release%type) as
+mov_id movie_details.movie_id%type;
+begin
+mov_id:=fnGenerateMovieID;
+insert into movie_details values(mov_id,v_mname,v_lang,v_genre,v_duration,v_dor);
+dbms_output.put_line('1 row inserted in Movie_details table');
+end;
+end;
+/
+
+SQL> select substr(max(movie_id),4) from movie_details;           //autogenerate logic
+
+SUBSTR(MAX(MOVIE_ID),4)
+----------------------------
+107
+
+//execute Movie_Pack.prNewMovie('Avengers 2','English','Sci-Fi',2.60,'03-NOV-15');//
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+que6]
+Create a Package named PKG_TRANSPORTS which contains Public members as mentioned below:
+-Public Exception: ROUTE_NOT_FOUND
+-Public Procedure: SHOW_DETAILS
+
+a)Public Exception: ROUTE_NOT_FOUND
+Associate ROUTE_NOT_FOUND exception with ERROR CODE: -20000.
+
+b)Public Procedure: SHOW_DETAILS 
+Procedure accepts ROUTE_NO as parameter. 
+
+If route number is invalid, procedure raise exception with ERROR CODE: -20000 and ERROR MESSAGE: Invalid route number. 
+
+Display list of schedule_ids, if route number is valid.
+
+d)Invoke the above procedure SHOW_DETAILS from an anonymous block and display output. Anonymous block must handle exception raised in procedure with help of ROUTE_NOT_FOUND exception.
+e)should handle all the probable errors
+
+Note: refer Bus Schedule schema
+
+create or replace package PKG_TRANSPORTS as
+procedure SHOW_DETAILS(p_rtno route.routeno%type);
+row_not_found exception;
+pragma exception_init(row_not_found,-20000);
+var number;
+end;
+/
+
+create or replace package body PKG_TRANSPORTS as
+
+procedure SHOW_DETAILS(p_rtno route.routeno%type) as
+
+	cursor c_sch is select * from schedule where route_no=p_rtno;
+	v_sch c_sch%rowtype;
+begin
+	open c_sch;
+	loop
+		fetch c_sch into v_sch;
+		if c_sch%rowcount = 0 then
+			raise PKG_TRANSPORTS.row_not_found;
+		end if;
+		exit when c_sch%notfound;
+		dbms_output.put_line('Schedule ID is '||v_sch.schedule_id);
+	end loop;
+	close c_sch;
+exception
+	when PKG_TRANSPORTS.row_not_found then
+	dbms_output.put_line('Invalid route number');
+
+end;
+end;
+/
+
+execute PKG_TRANSPORTS.SHOW_DETAILS('r001');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SQL> desc contractor
+ Name                           
+ -------------------------
+ CONTRACTOR_ID                  
+ CNAME                          
+ CONTACT                        
+
+SQL> desc bus
+ Name                           
+ -------------------------
+ BUS_NO                         
+ BUS_TYPE                       
+ MANUFACTURER                   
+ MANUFACTURING_DT               
+ CONTRACTOR_ID                  
+
+SQL> desc route
+ Name                           
+ -------------------------
+ ROUTENO                        
+ START_LOC                      
+ END_LOC                        
+
+SQL> desc schedule
+ Name                           
+ -------------------------
+ SCHEDULE_ID                    
+ BUS_NO                         
+ ROUTE_NO                       
+ START_TIME                     
+
+
+
+
+
+
+
+
+
+
